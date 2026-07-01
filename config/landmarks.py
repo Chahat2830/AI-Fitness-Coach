@@ -1,0 +1,37 @@
+"""
+MediaPipe Pose Landmark Indices
+"""
+
+# Face
+NOSE = 0
+
+# Shoulders
+LEFT_SHOULDER = 11
+RIGHT_SHOULDER = 12
+
+# Elbows
+LEFT_ELBOW = 13
+RIGHT_ELBOW = 14
+
+# Wrists
+LEFT_WRIST = 15
+RIGHT_WRIST = 16
+
+# Hips
+LEFT_HIP = 23
+RIGHT_HIP = 24
+
+# Knees
+LEFT_KNEE = 25
+RIGHT_KNEE = 26
+
+# Ankles
+LEFT_ANKLE = 27
+RIGHT_ANKLE = 28
+
+# Feet
+LEFT_HEEL = 29
+RIGHT_HEEL = 30
+
+LEFT_FOOT = 31
+RIGHT_FOOT = 32

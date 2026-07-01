@@ -1,0 +1,16 @@
+# Local environment variables
+.env
+
+# Python build and virtual environment folders
+__pycache__/
+*.pyc
+.conda/
+venv/
+.env/
+
+# Streamlit temporary runtime configurations
+.streamlit/
+
+# Local data / media processing directories
+uploads/
+outputs/
