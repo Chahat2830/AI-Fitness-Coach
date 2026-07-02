@@ -1,25 +1,15 @@
 import streamlit as st
 import cv2
-
-# Safely import the sub-module components directly to bypass Python 3.14 dynamic attribute bugs
-try:
-    import mediapipe as mp
-    from mediapipe.python.solutions import pose as mp_pose
-except ImportError:
-    # Fallback for local environments or different wheel distributions
-    import mediapipe as mp
-    mp_pose = mp.solutions.pose
+import mediapipe as mp
 
 class PoseDetector:
     """
-    Encapsulates MediaPipe Pose Topology configuration safely.
+    Encapsulates MediaPipe Pose Topology configuration.
     """
     
     def __init__(self):
-        # Assign the safely imported module reference
-        self.mp_pose = mp_pose
+        self.mp_pose = mp.solutions.pose
         
-        # Initialize the baseline model tracking solution
         self.pose = self.mp_pose.Pose(
             static_image_mode=True,
             model_complexity=2,
