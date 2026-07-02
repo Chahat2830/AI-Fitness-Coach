@@ -1,5 +1,6 @@
 import mediapipe as mp
 import streamlit as st
+import mediapipe.python.solutions.pose as mp_pose_solution
 
 st.write("Python version check")
 st.write("MediaPipe version:", getattr(mp, "__version__", "Unknown"))
