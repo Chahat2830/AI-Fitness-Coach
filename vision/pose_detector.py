@@ -1,7 +1,7 @@
 import streamlit as st
 import cv2
 
-# 1. Direct structural import to bypass the broken 'solutions' dynamic attribute proxy
+# Safely import the sub-module components directly to bypass Python 3.14 dynamic attribute bugs
 try:
     import mediapipe as mp
     from mediapipe.python.solutions import pose as mp_pose
@@ -12,13 +12,14 @@ except ImportError:
 
 class PoseDetector:
     """
-    Encapsulates MediaPipe Pose Topology configuration.
+    Encapsulates MediaPipe Pose Topology configuration safely.
     """
     
     def __init__(self):
-        # 2. Use the directly imported module instead of trying to look up mp.solutions
+        # Assign the safely imported module reference
         self.mp_pose = mp_pose
         
+        # Initialize the baseline model tracking solution
         self.pose = self.mp_pose.Pose(
             static_image_mode=True,
             model_complexity=2,
@@ -27,9 +28,9 @@ class PoseDetector:
         )
 
     def detect(self, image):
-
+        """
+        Processes a BGR image frame and extracts MediaPipe pose tracking landmarks.
+        """
         rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-
         results = self.pose.process(rgb)
-
         return results
