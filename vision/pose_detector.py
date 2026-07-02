@@ -1,3 +1,12 @@
+import mediapipe as mp
+import streamlit as st
+
+st.write("Python version check")
+st.write("MediaPipe version:", getattr(mp, "__version__", "Unknown"))
+st.write("MediaPipe file:", getattr(mp, "__file__", "Unknown"))
+st.write("Has solutions:", hasattr(mp, "solutions"))
+
+
 import streamlit as st
 import cv2
 import mediapipe as mp
