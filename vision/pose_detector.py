@@ -1,21 +1,29 @@
+import streamlit as st
 import cv2
-import mediapipe as mp
 
+# 1. Direct structural import to bypass the broken 'solutions' dynamic attribute proxy
+try:
+    import mediapipe as mp
+    from mediapipe.python.solutions import pose as mp_pose
+except ImportError:
+    # Fallback for local environments or different wheel distributions
+    import mediapipe as mp
+    mp_pose = mp.solutions.pose
 
 class PoseDetector:
     """
-    Detects human pose landmarks using MediaPipe.
+    Encapsulates MediaPipe Pose Topology configuration.
     """
-
+    
     def __init__(self):
-        self.mp_pose = mp.solutions.pose
-
+        # 2. Use the directly imported module instead of trying to look up mp.solutions
+        self.mp_pose = mp_pose
+        
         self.pose = self.mp_pose.Pose(
             static_image_mode=True,
             model_complexity=2,
-            smooth_landmarks=True,
             enable_segmentation=False,
-            min_detection_confidence=0.5,
+            min_detection_confidence=0.5
         )
 
     def detect(self, image):
