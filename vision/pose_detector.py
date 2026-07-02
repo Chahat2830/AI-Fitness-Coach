@@ -1,36 +1,22 @@
-import mediapipe as mp
-import streamlit as st
-import mediapipe.python.solutions.pose as mp_pose_solution
-
-st.write("Python version check")
-st.write("MediaPipe version:", getattr(mp, "__version__", "Unknown"))
-st.write("MediaPipe file:", getattr(mp, "__file__", "Unknown"))
-st.write("Has solutions:", hasattr(mp, "solutions"))
-
-
 import streamlit as st
 import cv2
-import mediapipe as mp
+import numpy as np
+# Direct import to bypass the dynamic solutions routing error entirely
+import mediapipe.python.solutions.pose as mp_pose_solution
 
 class PoseDetector:
-    """
-    Encapsulates MediaPipe Pose Topology configuration.
-    """
-    
     def __init__(self):
-        self.mp_pose = mp.solutions.pose
+        # 1. Assign the directly imported module solution
+        self.mp_pose = mp_pose_solution
         
+        # 2. Initialize the actual MediaPipe Pose tracking object
         self.pose = self.mp_pose.Pose(
             static_image_mode=True,
-            model_complexity=2,
+            model_complexity=2,       # High-performance tracking
             enable_segmentation=False,
             min_detection_confidence=0.5
         )
-
-    def detect(self, image):
-        """
-        Processes a BGR image frame and extracts MediaPipe pose tracking landmarks.
-        """
-        rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        results = self.pose.process(rgb)
-        return results
+        
+        # 3. Initialize drawing utilities if your service uses them
+        import mediapipe.python.solutions.drawing_utils as mp_drawing
+        self.mp_drawing = mp_drawing
