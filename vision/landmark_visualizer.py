@@ -1,95 +1,71 @@
 import cv2
 
-# Try importing MediaPipe modules safely. If it fails due to Python 3.14+, trigger manual rendering.
-try:
-    import mediapipe as mp
-    import mediapipe.python.solutions.drawing_utils as mp_drawing
-    import mediapipe.python.solutions.pose as mp_pose_solution
-    MEDIAPIPE_AVAILABLE = True
-except (ImportError, AttributeError):
-    MEDIAPIPE_AVAILABLE = False
-
-
 class LandmarkVisualizer:
     """
-    Handles drawing pose landmarks onto image frames with a native OpenCV fallback
-    to prevent application crashes on unsupported cloud runtimes (Python 3.14+).
+    Renders skeletal tracking links and joint positions onto body profile image frames.
+    Uses native OpenCV logic to bypass dynamic cloud rendering components completely.
     """
-
     def __init__(self):
-        if MEDIAPIPE_AVAILABLE:
-            self.drawer = mp_drawing
-            self.pose = mp_pose_solution
-            # Map structural skeletal connection pairs safely from MediaPipe
-            self.connections = self.pose.POSE_CONNECTIONS
-        else:
-            self.drawer = None
-            self.pose = None
-            # Standard MediaPipe Pose Topology Connection pairs for drawing manual lines
-            self.connections = [
-                (11, 12), (11, 13), (13, 15), (12, 14), (14, 16), # Upper Body / Arms
-                (11, 23), (12, 24), (23, 24),                     # Torso / Hips
-                (23, 25), (25, 27), (24, 26), (26, 28)            # Legs / Lower Body
-            ]
+        # Explicit connection pairs matching standard MediaPipe joint indices
+        self.connections = [
+            (11, 12), (11, 13), (13, 15), (12, 14), (14, 16), # Shoulders, Elbows, Wrists
+            (11, 23), (12, 24), (23, 24),                     # Torso / Upper Waist Grid
+            (23, 25), (25, 27), (24, 26), (26, 28),            # Hips, Knees, Ankles
+            (27, 29), (28, 30), (29, 31), (30, 32)            # Feet Foundations
+        ]
 
     def draw(self, image, results):
         output = image.copy()
 
-        # 1. Check if landmarks are present in the results payload
-        if not results or not hasattr(results, 'pose_landmarks') or not results.pose_landmarks:
+        # Safely exit if no tracking targets were identified
+        if not results or len(results) == 0 or results[0].keypoints is None:
             return output
 
-        # 2. Standard MediaPipe Drawing Track
-        if MEDIAPIPE_AVAILABLE and self.drawer is not None:
-            self.drawer.draw_landmarks(
-                output,
-                results.pose_landmarks,
-                self.connections,
-                self.drawer.DrawingSpec(
-                    color=(0, 255, 0),
-                    thickness=3,
-                    circle_radius=4,
-                ),
-                self.drawer.DrawingSpec(
-                    color=(255, 0, 0),
-                    thickness=2,
-                ),
-            )
-            return output
-
-        # 3. Clean OpenCV Manual Rendering Fallback (Runs on Python 3.14 Containers)
+        h, w, _ = output.shape
+        keypoints_obj = results[0].keypoints
+        xy = keypoints_obj.xy[0].cpu().numpy()     # Pixel coordinates
+        
+        if keypoints_obj.conf is not None:
+            conf = keypoints_obj.conf[0].cpu().numpy()
         else:
-            h, w, _ = output.shape
-            landmarks = results.pose_landmarks.landmark
-            pixel_coords = {}
+            conf = [0.9] * len(xy)
 
-            # Convert normalized coordinate vectors to explicit scale pixel points
-            for idx, lm in enumerate(landmarks):
-                # Only map highly visible tracking coordinates to avoid noisy artifacts
-                if hasattr(lm, 'visibility') and lm.visibility < 0.5:
-                    continue
-                cx, cy = int(lm.x * w), int(lm.y * h)
-                pixel_coords[idx] = (cx, cy)
+        # Map COCO values back to the expected visualization indices
+        coco_to_mp_map = {
+            0: 0, 1: 2, 2: 5, 3: 7, 4: 8, 5: 11, 6: 12, 7: 13,
+            8: 14, 9: 15, 10: 16, 11: 23, 12: 24, 13: 25, 14: 26, 15: 27, 16: 28
+        }
 
-            # Draw Skeletal Tracking Connection Lines (Red)
-            for start_idx, end_idx in self.connections:
-                if start_idx in pixel_coords and end_idx in pixel_coords:
-                    cv2.line(
-                        output, 
-                        pixel_coords[start_idx], 
-                        pixel_coords[end_idx], 
-                        color=(255, 0, 0),   # BGR Red
-                        thickness=2
-                    )
+        # Convert tracking arrays into pixel tuples
+        pixel_coords = {}
+        for coco_idx, pt in enumerate(xy):
+            if conf[coco_idx] < 0.4:  # Filter out tracking points with low confidence
+                continue
+            cx, cy = int(pt[0]), int(pt[1])
+            mp_idx = coco_to_mp_map.get(coco_idx)
+            if mp_idx is not None:
+                pixel_coords[mp_idx] = (cx, cy)
 
-            # Draw Joint Keypoints Overlay (Green)
-            for idx, coord in pixel_coords.items():
-                cv2.circle(
-                    output, 
-                    coord, 
-                    radius=4, 
-                    color=(0, 255, 0),       # BGR Green
-                    thickness=-1             # Solid Fill
+        # Draw structural skeletal lines (Deep Sky Blue)
+        for start_idx, end_idx in self.connections:
+            if start_idx in pixel_coords and end_idx in pixel_coords:
+                cv2.line(
+                    output,
+                    pixel_coords[start_idx],
+                    pixel_coords[end_idx],
+                    color=(235, 206, 135),  # BGR Sky Blue
+                    thickness=3,
+                    lineType=cv2.LINE_AA
                 )
 
-            return output
+        # Draw coordinate tracking markers (Bright Green)
+        for idx, coord in pixel_coords.items():
+            cv2.circle(
+                output,
+                coord,
+                radius=5,
+                color=(50, 205, 50),       # BGR Lime Green
+                thickness=-1
+            )
+
+        return output

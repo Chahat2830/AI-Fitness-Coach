@@ -50,17 +50,18 @@ st.markdown("### Body Analysis & Personalized Fitness Recommendations")
 
 st.divider()
 
-# --- UPDATED SIDEBAR PRIVACY CONTROL CARD ---
+# --- SIDEBAR CONFIGURATION CARD ---
 with st.sidebar:
     st.header("⚙️ Core Controls")
     
-    # High-visibility privacy notice at the very top
     st.error("🔒 **Privacy Policy Note:** This model does not save your uploaded images. All data processing occurs entirely within active memory session cycles and is completely discarded upon completion.")
     
     st.divider()
     
-    st.markdown("This interface uses **MediaPipe Pose Tracking** and a high-performance **Groq Llama 3.3** engine to compute camera-invariant biometrics.")
+    # Updated to correctly describe the active infrastructure
+    st.markdown("This interface uses **Ultralytics YOLO Pose Tracking** and a high-performance **Groq Llama 3.3** engine to compute camera-invariant biometrics.")
     st.info("Ensure files are clear, well-lit, and capture your entire frame baseline.")
+
 with st.form("user_form"):
     st.header("👤 Personal Information")
     col1, col2 = st.columns(2)
@@ -136,7 +137,6 @@ if analyze:
             st.success("🎉 Analysis and Plan Generation Complete!")
             st.divider()
 
-            # --- ALL SIX DISTINCT TABS RENDERED SUCCESSFULLY ---
             tab_summary, tab_vision, tab_metrics, tab_ai, tab_workout, tab_diet = st.tabs([
                 "🏆 Executive Summary", 
                 "👁️ Annotated Postures", 
@@ -166,7 +166,8 @@ if analyze:
                     st.success("✅ Excellent symmetry and muscular proportions.")
 
             with tab_vision:
-                st.subheader("MediaPipe Point Mapping Visualizations")
+                # Updated header title to show the current backend mapping model
+                st.subheader("YOLO Pose Keypoint Mapping Visualizations")
                 img_cols = st.columns(3)
                 img_mappings = report.get("images", {})
                 for idx, (view_title, path_str) in enumerate(img_mappings.items()):
@@ -177,7 +178,6 @@ if analyze:
                             rgb_mat = cv2.cvtColor(bgr_mat, cv2.COLOR_BGR2RGB)
                             st.image(rgb_mat, caption=f"{view_title.title()} View Landmarks", use_container_width=True)
 
-           # --- UPDATED: VISUAL METRIC INDICES TAB ---
             with tab_metrics:
                 st.subheader("📊 Proportional Camera-Invariant Indexes")
                 st.markdown("This dashboard translates your posture, symmetry, and skeletal ratios into standard fitness markers.")
@@ -186,19 +186,14 @@ if analyze:
                 
                 with m_col1:
                     st.markdown("### 📐 Structural Proportions")
-                    
-                    # 1. V-Taper Index
                     v_taper = metrics_data.get("v_taper_index", 1.0)
                     st.write(f"**V-Taper Ratio:** `{v_taper}`")
-                    # Ideal bodybuilding V-Taper profile is around 1.4-1.6
                     st.progress(min(max((v_taper - 1.0) / 0.6, 0.0), 1.0), text="Upper Frame Tapering")
                     
-                    # 2. Shoulder Dominance
                     sh_dom = metrics_data.get("shoulder_dominance", 1.0)
                     st.write(f"**Shoulder Dominance Score:** {round(min(sh_dom * 50, 100.0), 1)}%")
                     st.progress(min(max(sh_dom / 2.0, 0.0), 1.0))
                     
-                    # 3. Upper Body vs Lower Body Balance
                     ub_balance = metrics_data.get("upper_body_balance", 1.0)
                     lb_balance = metrics_data.get("lower_body_balance", 1.0)
                     
@@ -210,35 +205,30 @@ if analyze:
 
                 with m_col2:
                     st.markdown("### ⚖️ Muscular Development & Balance")
-                    
-                    # 4. Chest Development
                     chest_dev = metrics_data.get("chest_development", 0.5)
                     st.write(f"**Chest Muscular Volume:** {round(min(chest_dev * 100, 100.0), 1)}%")
                     st.progress(min(max(chest_dev, 0.0), 1.0))
                     
-                    # 5. Back Development
                     back_dev = metrics_data.get("back_development", 0.5)
                     st.write(f"**Posterior Chain / Back Density:** {round(min(back_dev * 45, 100.0), 1)}%")
                     st.progress(min(max(back_dev / 2.2, 0.0), 1.0))
                     
-                    # 6. Waist Score
                     waist_score = metrics_data.get("waist_score", 0.5)
                     st.write(f"**Core Stabilization Grid / Waist Score:** {round(min(waist_score * 100, 100.0), 1)}%")
                     st.progress(min(max(waist_score, 0.0), 1.0))
                     
                     st.divider()
                     
-                    # 7. Overall Symmetry Vector
                     sym_data = report.get("score", {})
                     overall_sym = metrics_data.get("overall_symmetry", sym_data.get("symmetry", 90.0))
                     
-                    # Create a prominent container block for the final Symmetry Percentage
                     st.markdown("#### 🏆 Structural Balance Rating")
                     st.metric(
                         label="Bilateral Muscle Symmetry Vector", 
                         value=f"{round(overall_sym, 2)}%", 
                         delta="Excellent Balance" if overall_sym > 90 else "Asymmetry Flagged"
                     )
+
             with tab_ai:
                 st.subheader("🤖 Coach AI Generated Diagnostic Strategy")
                 if ai_data:
@@ -280,16 +270,12 @@ if analyze:
                         st.markdown(f"🏃‍♂️ **Cardio Strategy:**\n{workout_plan.get('cardio', 'Low intensity training session.')}")
                     with col_r:
                         st.markdown(f"💤 **Recovery Guidelines:**\n{workout_plan.get('recovery', 'Ensure adequate sleep.')}")
-                else:
-                    st.info("Workout schedule generation profile skipped. Verify plan mapping configurations.")
 
-            # --- FIXED: COMPLETELY ACCURATE DIET PLAN INTERFACE ---
             with tab_diet:
                 st.subheader("🥗 Target Nutrition & Split Meal Blueprint")
                 if diet_plan and "meal_plan" in diet_plan:
                     st.success(f"🎯 **Nutrition Objective:** {diet_plan.get('goal', 'Balanced Profiling')}")
                     
-                    # Target Macro Scorecard Grid
                     macro_col1, macro_col2, macro_col3, macro_col4 = st.columns(4)
                     with macro_col1:
                         st.metric(label="Daily Calorie Target", value=f"{diet_plan.get('daily_calories', 0)} kcal")
@@ -303,7 +289,6 @@ if analyze:
                     st.markdown(f"💧 **Hydration Target Guidance:** Consume minimum **{diet_plan.get('water_liters', 3.5)} Liters** of water spread evenly throughout the day.")
                     st.divider()
 
-                    # Cleaned, standardized radio selector variables
                     diet_preference = st.radio(
                         "Select Diet Plan Strategy View Type:",
                         ["Vegetarian Plan", "Non-Vegetarian Plan"],
@@ -311,10 +296,8 @@ if analyze:
                     )
                     st.divider()
 
-                    # Extract the split meal dictionaries generated by the Groq Llama 3.3 model
                     meal_plan_data = diet_plan.get("meal_plan", {})
                     
-                    # Exact string matching condition loop to prevent default fallbacks
                     if diet_preference == "Vegetarian Plan":
                         selected_meals = meal_plan_data.get("veg", {})
                         st.markdown("### 🕒 1-Day Vegetarian Sample Meal Schedule")
@@ -333,8 +316,6 @@ if analyze:
                                     st.write("\n".join([f"- {food}" for food in items]))
                                 else:
                                     st.write(f"- {items}")
-                    else:
-                        st.info("Diet schedule data details could not be parsed for this specific selection option.")
 
                     st.divider()
                     col_sup, col_tips = st.columns(2)
@@ -350,9 +331,8 @@ if analyze:
                         tips = diet_plan.get("tips", [])
                         if tips:
                             st.write("\n".join([f"- {t}" for t in tips]))
-                else:
-                    st.info("Nutrition data payload skipped or missing. Verify your access parameters.")
 
         except Exception as pipeline_crash:
             st.error(f"💥 Internal Processing Error: {str(pipeline_crash)}")
             st.exception(pipeline_crash)
+}
