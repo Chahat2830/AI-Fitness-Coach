@@ -1,7 +1,7 @@
 """
 Filename: analysis_service.py
 Description: Orchestration service layer managing computer vision calculations and 
-             consolidated single-call Groq Cloud fitness template evaluation.
+             consolidated single-call AI fitness template evaluation.
 """
 
 import sys
@@ -44,6 +44,7 @@ class AnalysisService:
 
         annotated.parent.mkdir(parents=True, exist_ok=True)
 
+        # Receives the tuple output from the modern YOLO pose pipeline successfully
         _, landmarks = self.pipeline.process_image(
             image_path=str(image_path),
             annotated_output=str(annotated),
@@ -58,26 +59,29 @@ class AnalysisService:
         
         pipeline_warnings = []
 
-        # Step 1: Image Traversal Point Mapping
+        # Step 1: Image Traversal Point Mapping (YOLO Keypoint Tracking Execution)
         try:
             front_lms = self._process_view(front_image, "front")
         except Exception as e:
+            logging.error(f"Front-view pipeline anomaly: {str(e)}")
             front_lms = None
             pipeline_warnings.append("Front-view image processing failed.")
 
         try:
             side_lms = self._process_view(side_image, "side")
         except Exception as e:
+            logging.error(f"Side-view pipeline anomaly: {str(e)}")
             side_lms = None
             pipeline_warnings.append("Side-view image processing failed.")
 
         try:
             back_lms = self._process_view(back_image, "back")
         except Exception as e:
+            logging.error(f"Back-view pipeline anomaly: {str(e)}")
             back_lms = None
             pipeline_warnings.append("Back-view image processing failed.")
 
-        # Step 2: Compute measurements through Engine
+        # Step 2: Compute measurements through Engine safely
         if front_lms:
             self.engine.set_view_landmarks("front", json.dumps({lm["id"]: lm for lm in front_lms}))
         if side_lms:
@@ -85,8 +89,12 @@ class AnalysisService:
         if back_lms:
             self.engine.set_view_landmarks("back", json.dumps({lm["id"]: lm for lm in back_lms}))
 
-        self.engine.calculate_px_to_metric(user_info.get("height", 175.0), view='front' if front_lms else 'side')
-        self.engine.run_analysis()
+        # Fallback view routing optimization if a primary image upload tracking cycle failed
+        active_view = 'front' if front_lms else ('side' if side_lms else 'back')
+        if front_lms or side_lms or back_lms:
+            self.engine.calculate_px_to_metric(user_info.get("height", 175.0), view=active_view)
+            self.engine.run_analysis()
+        
         raw_results = self.engine.get_results()
 
         # Populate internal state profile dataclass container structures
@@ -104,10 +112,11 @@ class AnalysisService:
         if "side" in raw_results: profile.update_side(raw_results["side"])
         if "back" in raw_results: profile.update_back(raw_results["back"])
 
+        # Step 3: Compute Ratios and Metrics Cards
         metrics = BodyMetrics(raw_results.get("front", {}), raw_results.get("side", {}), raw_results.get("back", {})).calculate()
         score = BodyScore(metrics).calculate()
 
-        if "scores" in score:
+        if isinstance(score, dict) and "scores" in score:
             profile.update_score(score["scores"])
         else:
             profile.update_score(score)
@@ -115,52 +124,48 @@ class AnalysisService:
         updated_profile_dict = profile.to_dict()
         updated_profile_dict["metrics"] = metrics
 
-        # Step 4: Executing Unified Groq Query Handler Node
+        # Step 4: Executing Unified LLM Query Handler Node
         ai_status = "completed"
         ai_data, workout_data, diet_data = {}, {}, {}
-        
-        # --- FIX: Initialize variable to an empty string to prevent UnboundLocalError ---
         raw_master_payload = ""
         
         try:
             raw_master_payload = self.gemini.analyze_all_in_one(updated_profile_dict)
             
-            # Parse response block
+            # Safely verify JSON boundaries
             master_json = json.loads(raw_master_payload)
-            
             ai_data = master_json.get("analysis", {})
             workout_data = master_json.get("workout", {})
             diet_data = master_json.get("diet", {})
             
         except Exception as master_err:
-            logging.error(f"Groq Cloud generation failed: {str(master_err)}")
+            logging.error(f"Unified Coach LLM generation failed: {str(master_err)}")
             ai_status = "failed"
             
-            # Surface specific configuration guidance if the payload stayed empty
             if not raw_master_payload:
                 ai_data = {
-                    "summary": f"⚠️ **Groq Connection Failed:** {str(master_err)}.\n\n"
+                    "summary": f"⚠️ **AI Client Connection Failed:** {str(master_err)}.\n\n"
                                f"**Troubleshooting:** Make sure you installed `python-dotenv` via `pip install python-dotenv`, "
-                               f"and verify that your `.env` file contains a valid `GROQ_API_KEY`."
+                               f"and verify that your local configuration deployment contains valid environment keys."
                 }
             else:
                 ai_data = {
-                    "summary": f"⚠️ **JSON Parsing Mismatch:** {str(master_err)}.\n\n"
+                    "summary": f"⚠️ **JSON Structural Parsing Mismatch:** {str(master_err)}.\n\n"
                                f"Raw output slice: {raw_master_payload[:200]}"
                 }
 
         elapsed_sec = time.time() - start_time
 
-        # Compile report packaging through ReportBuilder pattern
+        # Step 5: Compile report packaging through ReportBuilder pattern
         builder = ReportBuilder()
         
         report = (
             builder
             .set_user(updated_profile_dict["user"])
             .set_measurements({
-                "front": updated_profile_dict["front"],
-                "side": updated_profile_dict["side"],
-                "back": updated_profile_dict["back"]
+                "front": updated_profile_dict.get("front", {}),
+                "side": updated_profile_dict.get("side", {}),
+                "back": updated_profile_dict.get("back", {})
             })
             .set_metrics(metrics)
             .set_score(score)
@@ -182,7 +187,7 @@ class AnalysisService:
         report_output_path = PROJECT_ROOT / "outputs" / "reports" / "latest_report.json"
         ReportExporter.export_json(report, report_output_path)
 
-        # Convert to dictionary layout and explicitly merge data for app.py fallback
+        # Convert to dictionary layout and explicitly merge data for app.py layout fallbacks
         report_dict = report.to_dict()
         if "workout" not in report_dict or not report_dict["workout"]:
             report_dict["workout"] = workout_data
